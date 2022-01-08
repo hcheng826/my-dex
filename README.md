@@ -1,13 +1,12 @@
-# Hardhat Hackathon Boilerplate
+# My DEX
 
-This repository contains a sample project that you can use as the starting point
-for your Ethereum project. It's also a great fit for learning the basics of
-smart contract development.
+A DEX for practicing Dapp development using hardhat template.
 
-This project is intended to be used with the
-[Hardhat Beginners Tutorial](https://hardhat.org/tutorial), but you should be
-able to follow it by yourself by reading the README and exploring its
-`contracts`, `tests`, `scripts` and `frontend` directories.
+## Features
+- Swap token (AMM mechanism)
+  - transaction fee
+- Support 3 types of token and they can be swapped with each other as well as gas native token
+- Liquidity mining
 
 ## Quick start
 
@@ -41,7 +40,7 @@ npm install
 npm start
 ```
 
-> Note: There's [an issue in `ganache-core`](https://github.com/trufflesuite/ganache-core/issues/650) that can make the `npm install` step fail. 
+> Note: There's [an issue in `ganache-core`](https://github.com/trufflesuite/ganache-core/issues/650) that can make the `npm install` step fail.
 >
 > If you see `npm ERR! code ENOLOCAL`, try running `npm ci` instead of `npm install`.
 
