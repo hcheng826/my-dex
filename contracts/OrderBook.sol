@@ -18,59 +18,58 @@ contract OrderBook is IOrderBook {
         baseToken = ERC20(_baseTokenAddress);
         orderById.push(Order(msg.sender, 0, 0, 0)); // highest buy
         orderById.push(Order(msg.sender, 2^256-1, 0, 0)); // lowest sell
-        highestBuyOrderId = 0;
-        lowestSellOrderId = 1;
+        highestBuyOrderId = 0; // dummy buy order
+        lowestSellOrderId = 1; // dummy sell order
     }
 
-    modifier validPriceAmount(uint256 _price, uint256 _amount) {
+    modifier positivePriceAmount(uint256 _price, uint256 _amount) {
         require(_price > 0 && _amount > 0, "invalid price or amount");
         _;
     }
 
-    function placeBuyOrder(uint256 _price, uint256 _amount) external validPriceAmount(_price, _amount) {
-        require(
-            baseToken.balanceOf(msg.sender) >= _amount*_price,
-            string(abi.encodePacked("insufficient ", baseToken.symbol()))
-        );
+    function placeOrder(uint256 _price, uint256 _amount, bool _isBuy) external positivePriceAmount(_price, _amount) {
+        ERC20 tokenAtHand = _isBuy ? baseToken : tradeToken;
+        require(tokenAtHand.balanceOf(msg.sender) >= _amount, string(abi.encodePacked("insufficient ", tokenAtHand.symbol())));
 
-        uint256 residualAmount = matchSellOrders(_amount, _price);
+        uint256 residualAmount = matchOrders(_amount, _price, _isBuy);
         if (residualAmount != 0) {
-            insertBuyOrder(residualAmount, _price);
+            insertOrder(residualAmount, _price, _isBuy);
         }
     }
 
-    // Sell token0 for token1
-    function placeSellOrder(uint256 _price, uint256 _amount) external validPriceAmount(_price, _amount) {}
-
-    function matchSellOrders(uint256 _price, uint256 _amount) internal returns (uint256 _residualAmount) {
-        Order storage lowestSellOrder = orderById[lowestSellOrderId];
+    function matchOrders(uint256 _price, uint256 _amount, bool _isBuy) internal returns (uint256 _residualAmount) {
+        uint256 edgeOrderId = _isBuy ? lowestSellOrderId : highestBuyOrderId;
+        Order storage edgeOrder = orderById[edgeOrderId];
         uint256 residualAmount = _amount;
 
-        while (lowestSellOrder.price < _price) {
-            if (lowestSellOrder.amount > residualAmount) {
-                lowestSellOrder.amount -= residualAmount;
-                executeOrder(msg.sender, lowestSellOrder.maker, getExecutionPrice(_price, lowestSellOrder.price), residualAmount);
+        bool canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
+
+        while (canExecute) {
+            if (edgeOrder.amount > residualAmount) {
+                edgeOrder.amount -= residualAmount;
+                executeOrder(msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), residualAmount);
                 return 0;
             } else {
-                residualAmount -= lowestSellOrder.amount;
-                executeOrder(msg.sender, lowestSellOrder.maker, getExecutionPrice(_price, lowestSellOrder.price), lowestSellOrder.amount);
-                uint256 nextLowsetOrderId = lowestSellOrder.nextOrderId;
-                if (nextLowsetOrderId == 0) { // no more sell orders back to dummy order
-                    lowestSellOrder.amount = 0;
-                    lowestSellOrder.price = 0;
+                residualAmount -= edgeOrder.amount;
+                executeOrder(msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), edgeOrder.amount);
+
+                uint256 nextEdgeOrderId = edgeOrder.nextOrderId;
+                if (_isBuy) {
+                    lowestSellOrderId = nextEdgeOrderId;
                 } else {
-                    lowestSellOrderId = nextLowsetOrderId;
-                    delete orderById[lowestSellOrderId];
+                    highestBuyOrderId = nextEdgeOrderId;
                 }
-                lowestSellOrder = orderById[lowestSellOrderId];
+
+                edgeOrder = orderById[nextEdgeOrderId];
             }
+            canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
         }
         return residualAmount;
     }
 
-    function matchBuyOrders(uint256 _price, uint256 _amount) internal returns (uint256 _residualAmount) {}
-    function insertBuyOrder(uint256 _price, uint256 _amount) internal {}
-    function insertSellOrder(uint256 _price, uint256 _amount) internal {}
+    function insertOrder(uint256 _price, uint256 _amount, bool _isBuy) internal {
+
+    }
     function executeOrder(address _buyer, address _seller, uint256 _price, uint256 _amount) internal {
         // transfer the token
     }
