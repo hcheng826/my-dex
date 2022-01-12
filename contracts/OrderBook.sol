@@ -18,10 +18,8 @@ contract OrderBook is IOrderBook {
     constructor(address _tradeTokenAddress, address _baseTokenAddress) {
         tradeToken = ERC20(_tradeTokenAddress);
         baseToken = ERC20(_baseTokenAddress);
-        orderById[0] = Order(msg.sender, 0, 0, 0);
-        orderById[1] = Order(msg.sender, 2^256-1, 0, 0);
-        // orderById.push(Order(msg.sender, 0, 0, 0)); // highest buy
-        // orderById.push(Order(msg.sender, 2^256-1, 0, 0)); // lowest sell
+        orderById[0] = Order(msg.sender, 0, 0, 0); // highest buy
+        orderById[1] = Order(msg.sender, 2^256-1, 0, 0); // lowest sell
         highestBuyOrderId = 0; // dummy buy order
         lowestSellOrderId = 1; // dummy sell order
         orderIdCounter = 2;
@@ -57,11 +55,11 @@ contract OrderBook is IOrderBook {
         while (canExecute) {
             if (edgeOrder.amount > residualAmount) {
                 orderById[edgeOrderId].amount -= residualAmount;
-                executeOrder(msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), residualAmount);
+                executeOrder(_isBuy, msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), residualAmount);
                 return 0;
             } else {
                 residualAmount -= edgeOrder.amount;
-                executeOrder(msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), edgeOrder.amount);
+                executeOrder(_isBuy, msg.sender, edgeOrder.maker, getExecutionPrice(_price, edgeOrder.price), edgeOrder.amount);
 
                 uint256 nextEdgeOrderId = edgeOrder.nextOrderId;
                 if (_isBuy) {
@@ -91,14 +89,23 @@ contract OrderBook is IOrderBook {
             shouldInsert = _isBuy ? _price > nextOrder.price : _price < nextOrder.price;
         }
         // insert the order
+        ERC20 makerToken = _isBuy ? baseToken : tradeToken;
+        makerToken.transfer(address(this), _amount);
         orderById[orderIdCounter] = Order(msg.sender, _price, _amount, currOrder.nextOrderId);
         orderById[currOrderId].nextOrderId = orderIdCounter;
         orderIdCounter += 1;
     }
 
-    function executeOrder(address _buyer, address _seller, uint256 _price, uint256 _amount) internal {
-        // transfer the token
+    function executeOrder(bool _isBuy, address _taker, address _maker, uint256 _price, uint256 _amount) internal {
+        if (_isBuy) {
+            baseToken.transfer(_maker, _amount*_price);
+            tradeToken.transferFrom(address(this), _taker, _amount);
+        } else {
+            tradeToken.transfer(_maker, _amount);
+            baseToken.transferFrom(address(this), _taker, _amount*_price);
+        }
     }
+
     function getExecutionPrice(uint256 _buyPrice, uint256 _sellPrice) pure internal returns (uint256) {
         return (_buyPrice + _sellPrice) / 2;
     }
