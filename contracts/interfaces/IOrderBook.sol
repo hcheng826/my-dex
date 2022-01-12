@@ -9,8 +9,7 @@ interface IOrderBook {
         uint256 nextOrderId;
     }
 
-    function placeOrder(uint price, uint amount, bool isBuy) external;
+    function placeOrder(bool isBuy, uint price, uint amount) external;
 
-    event PlaceBuyOrder(address maker, uint price, uint amount);
-    event PlaceSellOrder(address maker, uint price, uint amount);
+    event PlaceOrder(bool isBuy, address maker, uint price, uint amount);
 }
