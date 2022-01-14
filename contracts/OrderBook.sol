@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IOrderBook } from "./interfaces/IOrderBook.sol";
 
+import "hardhat/console.sol";
+
 // exchange pair: token1/token0
 contract OrderBook is IOrderBook {
     ERC20 public tradeToken;
@@ -30,7 +32,12 @@ contract OrderBook is IOrderBook {
         _;
     }
 
-    function placeOrder(bool _isBuy, uint256 _price, uint256 _amount) external positivePriceAmount(_price, _amount) {
+    function getOrderById(uint256 _id) external view returns (Order memory) {
+        return orderById[_id];
+    }
+
+    function placeOrder(bool _isBuy, uint256 _price, uint256 _amount) external override positivePriceAmount(_price, _amount) {
+        console.log('msg.sender in placeOrder: %s', msg.sender);
         if (_isBuy) {
             require(baseToken.balanceOf(msg.sender) >= _amount*_price, string(abi.encodePacked("insufficient ", baseToken.symbol())));
         } else {
@@ -38,6 +45,7 @@ contract OrderBook is IOrderBook {
         }
 
         uint256 residualAmount = matchOrders(_isBuy, _amount, _price);
+        console.log('residualAmount: ', residualAmount);
         if (residualAmount != 0) {
             insertOrder(_isBuy, residualAmount, _price);
         }
@@ -51,6 +59,7 @@ contract OrderBook is IOrderBook {
         uint256 residualAmount = _amount;
 
         bool canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
+        console.log('canExecute: ', canExecute);
 
         while (canExecute) {
             if (edgeOrder.amount > residualAmount) {
@@ -77,6 +86,7 @@ contract OrderBook is IOrderBook {
     }
 
     function insertOrder(bool _isBuy, uint256 _price, uint256 _amount) internal {
+        console.log('msg.sender in insertOrder: %s', msg.sender);
         uint256 currOrderId = _isBuy ? highestBuyOrderId: lowestSellOrderId;
         Order memory currOrder = orderById[currOrderId];
         Order memory nextOrder = orderById[currOrder.nextOrderId];
@@ -90,13 +100,17 @@ contract OrderBook is IOrderBook {
         }
         // insert the order
         ERC20 makerToken = _isBuy ? baseToken : tradeToken;
-        makerToken.transfer(address(this), _amount);
+        uint256 transferAmount = _isBuy ? _amount*_price : _amount;
+        console.log('transferAmount: ', transferAmount);
+        console.log('balance: ', makerToken.balanceOf(msg.sender));
+        makerToken.transferFrom(msg.sender, address(this), transferAmount);
         orderById[orderIdCounter] = Order(msg.sender, _price, _amount, currOrder.nextOrderId);
         orderById[currOrderId].nextOrderId = orderIdCounter;
         orderIdCounter += 1;
     }
 
     function executeOrder(bool _isBuy, address _taker, address _maker, uint256 _price, uint256 _amount) internal {
+        console.log('executeOrder run');
         if (_isBuy) {
             baseToken.transfer(_maker, _amount*_price);
             tradeToken.transferFrom(address(this), _taker, _amount);
