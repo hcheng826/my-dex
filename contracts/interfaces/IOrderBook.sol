@@ -10,6 +10,4 @@ interface IOrderBook {
     }
 
     function placeOrder(bool isBuy, uint price, uint amount) external;
-
-    event PlaceOrder(bool isBuy, address maker, uint price, uint amount);
 }

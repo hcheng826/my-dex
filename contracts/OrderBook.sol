@@ -14,14 +14,17 @@ contract OrderBook is IOrderBook {
     // Order[] public orderById;
     mapping(uint256 => Order) public orderById;
     uint256 orderIdCounter;
-    uint256 highestBuyOrderId;
-    uint256 lowestSellOrderId;
+    uint256 public highestBuyOrderId;
+    uint256 public lowestSellOrderId;
+
+    event OrderPlaced(bool _isBuy, address _maker, uint _price, uint _amount);
+    event OrderExecuted(bool _isBuy, address _maker, address _taker, uint _price, uint _amount);
 
     constructor(address _tradeTokenAddress, address _baseTokenAddress) {
         tradeToken = ERC20(_tradeTokenAddress);
         baseToken = ERC20(_baseTokenAddress);
         orderById[0] = Order(msg.sender, 0, 0, 0); // highest buy
-        orderById[1] = Order(msg.sender, 2^256-1, 0, 0); // lowest sell
+        orderById[1] = Order(msg.sender, 2^256-1, 0, 1); // lowest sell
         highestBuyOrderId = 0; // dummy buy order
         lowestSellOrderId = 1; // dummy sell order
         orderIdCounter = 2;
@@ -37,20 +40,20 @@ contract OrderBook is IOrderBook {
     }
 
     function placeOrder(bool _isBuy, uint256 _price, uint256 _amount) external override positivePriceAmount(_price, _amount) {
-        console.log('msg.sender in placeOrder: %s', msg.sender);
+        // console.log('msg.sender in placeOrder: %s', msg.sender);
         if (_isBuy) {
             require(baseToken.balanceOf(msg.sender) >= _amount*_price, string(abi.encodePacked("insufficient ", baseToken.symbol())));
         } else {
             require(tradeToken.balanceOf(msg.sender) >= _amount, string(abi.encodePacked("insufficient ", tradeToken.symbol())));
         }
 
-        uint256 residualAmount = matchOrders(_isBuy, _amount, _price);
+        console.log('_amount: ', _amount);
+        uint256 residualAmount = matchOrders(_isBuy, _price, _amount);
         console.log('residualAmount: ', residualAmount);
+        console.log('_price: ', _price);
         if (residualAmount != 0) {
-            insertOrder(_isBuy, residualAmount, _price);
+            insertOrder(_isBuy, _price, residualAmount);
         }
-
-        emit PlaceOrder(_isBuy, msg.sender, _price, _amount);
     }
 
     function matchOrders(bool _isBuy, uint256 _price, uint256 _amount) internal returns (uint256 _residualAmount) {
@@ -59,7 +62,7 @@ contract OrderBook is IOrderBook {
         uint256 residualAmount = _amount;
 
         bool canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
-        console.log('canExecute: ', canExecute);
+        // console.log('canExecute: ', canExecute);
 
         while (canExecute) {
             if (edgeOrder.amount > residualAmount) {
@@ -86,9 +89,25 @@ contract OrderBook is IOrderBook {
     }
 
     function insertOrder(bool _isBuy, uint256 _price, uint256 _amount) internal {
-        console.log('msg.sender in insertOrder: %s', msg.sender);
-        uint256 currOrderId = _isBuy ? highestBuyOrderId: lowestSellOrderId;
-        Order memory currOrder = orderById[currOrderId];
+        uint256 headOrderId = _isBuy ? highestBuyOrderId: lowestSellOrderId;
+        Order memory headOrder = orderById[headOrderId];
+        bool shouldInsertHead = _isBuy ? _price > headOrder.price : _price < headOrder.price;
+        if (shouldInsertHead) {
+            uint256 newOrderId = orderIdCounter;
+            orderById[newOrderId] = Order(msg.sender, _price, _amount, headOrderId);
+            if (_isBuy) {
+                highestBuyOrderId = newOrderId;
+            } else {
+                lowestSellOrderId = newOrderId;
+            }
+            orderIdCounter += 1;
+            console.log('_price: %s, _amount: %s', _price, _amount);
+            emit OrderPlaced(_isBuy, msg.sender, _price, _amount);
+            return ;
+        }
+
+        uint256 currOrderId = headOrderId;
+        Order memory currOrder = orderById[headOrderId];
         Order memory nextOrder = orderById[currOrder.nextOrderId];
         bool shouldInsert = _isBuy ? _price > nextOrder.price : _price < nextOrder.price;
         // loop until find the correct place to insert
@@ -101,16 +120,18 @@ contract OrderBook is IOrderBook {
         // insert the order
         ERC20 makerToken = _isBuy ? baseToken : tradeToken;
         uint256 transferAmount = _isBuy ? _amount*_price : _amount;
-        console.log('transferAmount: ', transferAmount);
-        console.log('balance: ', makerToken.balanceOf(msg.sender));
+        // console.log('transferAmount: ', transferAmount);
+        // console.log('balance: ', makerToken.balanceOf(msg.sender));
         makerToken.transferFrom(msg.sender, address(this), transferAmount);
         orderById[orderIdCounter] = Order(msg.sender, _price, _amount, currOrder.nextOrderId);
         orderById[currOrderId].nextOrderId = orderIdCounter;
         orderIdCounter += 1;
+
+        emit OrderPlaced(_isBuy, msg.sender, _price, _amount);
     }
 
-    function executeOrder(bool _isBuy, address _taker, address _maker, uint256 _price, uint256 _amount) internal {
-        console.log('executeOrder run');
+    function executeOrder(bool _isBuy, address _maker, address _taker, uint256 _price, uint256 _amount) internal {
+        // console.log('executeOrder run');
         if (_isBuy) {
             baseToken.transfer(_maker, _amount*_price);
             tradeToken.transferFrom(address(this), _taker, _amount);
@@ -118,6 +139,8 @@ contract OrderBook is IOrderBook {
             tradeToken.transfer(_maker, _amount);
             baseToken.transferFrom(address(this), _taker, _amount*_price);
         }
+
+        emit OrderExecuted(_isBuy, _maker, _taker, _price, _amount);
     }
 
     function getExecutionPrice(uint256 _buyPrice, uint256 _sellPrice) pure internal returns (uint256) {

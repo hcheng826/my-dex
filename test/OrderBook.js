@@ -7,13 +7,14 @@ describe('OrderBook contract', () => {
     const initSupplyA = 10000;
     const initSupplyB = 10000;
 
-    function getOrders(headOrder) {
-        if(headOrder.amount == 0) { return []; }
+    async function getOrders(contract, headOrderId) {
+        const headOrder = await contract.getOrderById(headOrderId);
+        if(headOrder.amount.toNumber() == 0) { return []; }
         let orders = [headOrder];
-        currOrder = getOrderById[headOrder.nextOrderId];
-        while (currOrder.amount != 0) {
+        let currOrder = await contract.getOrderById(headOrder.nextOrderId);
+        while (currOrder.amount.toNumber() != 0) {
             orders.push(currOrder);
-            currOrder = getOrderById[currOrder.nextOrderId];
+            currOrder = getOrderById[currOrder.nextOrderId.toNumber()];
         }
         return orders;
     }
@@ -41,23 +42,23 @@ describe('OrderBook contract', () => {
 
     describe('Place order', async () => {
         it('can place buy order', async () => {
-            console.log('owner: ', owner.address);
-            console.log('addr1:', addr1.address);
-            console.log('TokenA: ', TokenA.address);
-            console.log('TokenB: ', TokenB.address);
-            console.log('OrderBook: ', OrderBook.address);
+            const tx = await OrderBook.placeOrder(true, 10, 2);
+            const rc = await tx.wait();
+            const orderPlaced = rc.events.find(event => event.event === 'OrderPlaced');
 
-            console.log((await TokenA.balanceOf(owner.address)).toNumber());
-            console.log((await TokenB.balanceOf(owner.address)).toNumber());
+            expect(orderPlaced.args._isBuy).to.eql(true);
+            expect(orderPlaced.args._maker).to.eql(owner.address);
+            expect(orderPlaced.args._price.toNumber()).to.eql(10);
+            expect(orderPlaced.args._amount.toNumber()).to.eql(2);
 
-            // console.log((await OrderBook.getBaseTokenBalance(owner.address)).toNumber());
+            const highestBuyOrderId = (await OrderBook.highestBuyOrderId()).toNumber();
 
-            const tx = await OrderBook.placeOrder(true, 1, 1);
-            console.log(tx);
-            console.log(await tx.wait());
-            // orders = getOrders(OrderBook.highestBuyOrderId);
-            // console.log(orders);
-            // expect(orders.length).to.equal(1);
+            orders = await getOrders(OrderBook, highestBuyOrderId);
+            expect(orders.length).to.eql(1);
+            expect(orders[0].maker).to.eql(owner.address);
+            expect(orders[0].price.toNumber()).to.eql(10);
+            expect(orders[0].amount.toNumber()).to.eql(2);
+            expect(orders[0].nextOrderId.toNumber()).to.eql(0);
         });
         it('can place sell order', async () => {});
         it('cannot place order when insufficient amount', async () => {});
