@@ -9,5 +9,6 @@ interface IOrderBook {
         uint256 nextOrderId;
     }
 
-    function placeOrder(bool isBuy, uint price, uint amount) external;
+    function placeBuyOrder(uint price, uint amount) external;
+    function placeSellOrder(uint price, uint amount) external;
 }

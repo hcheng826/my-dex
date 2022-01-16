@@ -39,7 +39,15 @@ contract OrderBook is IOrderBook {
         return orderById[_id];
     }
 
-    function placeOrder(bool _isBuy, uint256 _price, uint256 _amount) external override positivePriceAmount(_price, _amount) {
+    function placeBuyOrder(uint256 _price, uint256 _amount) external override positivePriceAmount(_price, _amount) {
+        placeOrder(true, _price, _amount);
+    }
+
+    function placeSellOrder(uint256 _price, uint256 _amount) external override positivePriceAmount(_price, _amount) {
+        placeOrder(false, _price, _amount);
+    }
+
+    function placeOrder(bool _isBuy, uint256 _price, uint256 _amount) internal {
         // console.log('msg.sender in placeOrder: %s', msg.sender);
         if (_isBuy) {
             require(baseToken.balanceOf(msg.sender) >= _amount*_price, string(abi.encodePacked("insufficient ", baseToken.symbol())));
@@ -47,10 +55,10 @@ contract OrderBook is IOrderBook {
             require(tradeToken.balanceOf(msg.sender) >= _amount, string(abi.encodePacked("insufficient ", tradeToken.symbol())));
         }
 
-        console.log('_amount: ', _amount);
+        // console.log('_amount: ', _amount);
         uint256 residualAmount = matchOrders(_isBuy, _price, _amount);
-        console.log('residualAmount: ', residualAmount);
-        console.log('_price: ', _price);
+        // console.log('residualAmount: ', residualAmount);
+        // console.log('_price: ', _price);
         if (residualAmount != 0) {
             insertOrder(_isBuy, _price, residualAmount);
         }
@@ -101,7 +109,7 @@ contract OrderBook is IOrderBook {
                 lowestSellOrderId = newOrderId;
             }
             orderIdCounter += 1;
-            console.log('_price: %s, _amount: %s', _price, _amount);
+            // console.log('_price: %s, _amount: %s', _price, _amount);
             emit OrderPlaced(_isBuy, msg.sender, _price, _amount);
             return ;
         }
