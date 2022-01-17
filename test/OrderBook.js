@@ -3,7 +3,8 @@ const { expect } = require("chai");
 describe('OrderBook contract', () => {
     let TokenA, TokenB;
     let OrderBook;
-    let getOrderById;
+    let getOrderById, getHighestBuyOrderId, getLowestSellOrderId, getBuyOrders, getSellOrders;
+
     const initSupplyA = 10000;
     const initSupplyB = 10000;
 
@@ -34,15 +35,28 @@ describe('OrderBook contract', () => {
         OrderBook = await OrderBook.deploy(TokenA.address, TokenB.address);
         await OrderBook.deployed();
 
+        getHighestBuyOrderId = async () => { return (await OrderBook.highestBuyOrderId()).toNumber() };
+        getLowestSellOrderId = async () => { return (await OrderBook.lowestSellOrderId()).toNumber() };
+        getBuyOrders = async () => {
+            const highestBuyOrderId = await getHighestBuyOrderId();
+            return await getOrders(highestBuyOrderId);
+        };
+        getSellOrders = async () => {
+            const lowestSellOrderId = await getLowestSellOrderId();
+            return await getOrders(lowestSellOrderId);
+        };
         getOrderById = async (id) => { return await OrderBook.getOrderById(id); };
 
-        // TokenA.approve(OrderBook.address, (await TokenA.balanceOf(owner)).toNumber());
-        // TokenB.approve(OrderBook.address, (await TokenB.balanceOf(owner)).toNumber());
-        TokenA.approve(OrderBook.address, initSupplyA);
-        TokenB.approve(OrderBook.address, initSupplyB);
+        console.log(owner.address);
+        console.log(addr1.address);
+        console.log(OrderBook.address);
 
         TokenA.transfer(addr1.address, 100);
         TokenB.transfer(addr1.address, 100);
+        TokenA.approve(OrderBook.address, initSupplyA);
+        TokenB.approve(OrderBook.address, initSupplyB);
+        TokenA.connect(addr1).approve(OrderBook.address, initSupplyA);
+        TokenB.connect(addr1).approve(OrderBook.address, initSupplyB);
     });
 
     describe('Place order', async () => {
@@ -55,8 +69,7 @@ describe('OrderBook contract', () => {
             expect(orderPlaced.args._price.toNumber()).to.eql(10);
             expect(orderPlaced.args._amount.toNumber()).to.eql(2);
 
-            const highestBuyOrderId = (await OrderBook.highestBuyOrderId()).toNumber();
-            orders = await getOrders(highestBuyOrderId);
+            orders = await getBuyOrders();
             expect(orders.length).to.eql(1);
             expect(orders[0].maker).to.eql(owner.address);
             expect(orders[0].price.toNumber()).to.eql(10);
@@ -72,8 +85,7 @@ describe('OrderBook contract', () => {
             expect(orderPlaced.args._price.toNumber()).to.eql(10);
             expect(orderPlaced.args._amount.toNumber()).to.eql(2);
 
-            const lowestSellOrderId = (await OrderBook.lowestSellOrderId()).toNumber();
-            orders = await getOrders(lowestSellOrderId);
+            orders = await getSellOrders();
             expect(orders.length).to.eql(1);
             expect(orders[0].maker).to.eql(owner.address);
             expect(orders[0].price.toNumber()).to.eql(10);
@@ -97,6 +109,8 @@ describe('OrderBook contract', () => {
             expect(order1.amount.toNumber()).to.eql(3);
             expect(order2.amount.toNumber()).to.eql(1);
             expect(order3.amount.toNumber()).to.eql(2);
+            orders = await getBuyOrders();
+            expect(orders.length).to.eql(3);
         });
         it('can insert sell order', async () => {
             await OrderBook.placeSellOrder(10, 2);
@@ -111,18 +125,126 @@ describe('OrderBook contract', () => {
             expect(order1.amount.toNumber()).to.eql(2);
             expect(order2.amount.toNumber()).to.eql(1);
             expect(order3.amount.toNumber()).to.eql(3);
+            orders = await getSellOrders();
+            expect(orders.length).to.eql(3);
         });
     });
-    xdescribe('Consume order', async () => {
+    describe('Consume order', async () => {
+        it('can take 1 buy order with same price', async () => {
+            await OrderBook.placeBuyOrder(10, 2);
+            await OrderBook.connect(addr1).placeSellOrder(10, 2);
 
-        it('can take 1 buy order', async () => {
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9880);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(98);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(120);
+            orders = await getBuyOrders();
+            expect(orders.length).to.eql(0);
         });
-        it('can take 1+ buy order', async () => {});
-        it('can take 1 sell order', async () => {});
-        it('can take 1+ sell order', async () => {});
+        it('can take 1 buy order with different price', async () => {
+
+            await OrderBook.placeBuyOrder(12, 2);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9900);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9876);
+            expect((await TokenB.balanceOf(OrderBook.address)).toNumber()).to.eql(24);
+
+            await OrderBook.connect(addr1).placeSellOrder(10, 2);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9878);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(98);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(122);
+
+            orders = await getBuyOrders();
+            expect(orders.length).to.eql(0);
+        });
+        it('can take 1+ buy order', async () => {
+            await OrderBook.placeBuyOrder(10, 2);
+            await OrderBook.placeBuyOrder(12, 3);
+
+            await OrderBook.connect(addr1).placeSellOrder(9, 5);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9905);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9852);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(95);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(148);
+
+            orders = await getBuyOrders();
+            expect(orders.length).to.eql(0);
+        });
+        it('can take 1 sell order with different price', async () => {
+            await OrderBook.placeSellOrder(10, 2);
+            await OrderBook.connect(addr1).placeBuyOrder(12, 2);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9898);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9922);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(102);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(78);
+
+            orders = await getSellOrders();
+            expect(orders.length).to.eql(0);
+        });
+        it('can take 1+ sell order', async () => {
+            await OrderBook.placeSellOrder(10, 2);
+            await OrderBook.placeSellOrder(12, 3);
+
+            await OrderBook.connect(addr1).placeBuyOrder(13, 5);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9895);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9958);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(105);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(42);
+
+            orders = await getSellOrders();
+            expect(orders.length).to.eql(0);
+        });
     });
-    xdescribe('Mix: match and place order', async () => {
-        it('can execute partial buy order and place residual amount', async () => {});
-        it('can execute partial sell order and place residual amount', async () => {});
+    describe('Mix: match and place order', async () => {
+        it('can execute partial buy order and place residual amount', async () => {
+            await OrderBook.placeSellOrder(10, 2);
+            await OrderBook.connect(addr1).placeBuyOrder(13, 5);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9898);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9922);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(102);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(39);
+            expect((await TokenA.balanceOf(OrderBook.address)).toNumber()).to.eql(0);
+            expect((await TokenB.balanceOf(OrderBook.address)).toNumber()).to.eql(39);
+
+            sellOrders = await getSellOrders();
+            expect(sellOrders.length).to.eql(0);
+            buyOrders = await getBuyOrders();
+            expect(buyOrders.length).to.eql(1);
+            expect(buyOrders[0].maker).to.eql(addr1.address);
+            expect(buyOrders[0].price.toNumber()).to.eql(13);
+            expect(buyOrders[0].amount.toNumber()).to.eql(3);
+        });
+        it('can execute partial sell order and place residual amount', async () => {
+            await OrderBook.placeBuyOrder(13, 2);
+            await OrderBook.connect(addr1).placeSellOrder(10, 5);
+
+            expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
+            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9878);
+            expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(95);
+            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(122);
+            expect((await TokenA.balanceOf(OrderBook.address)).toNumber()).to.eql(3);
+            expect((await TokenB.balanceOf(OrderBook.address)).toNumber()).to.eql(0);
+
+            sellOrders = await getSellOrders();
+            expect(sellOrders.length).to.eql(1);
+            expect(sellOrders[0].maker).to.eql(addr1.address);
+            expect(sellOrders[0].price.toNumber()).to.eql(10);
+            expect(sellOrders[0].amount.toNumber()).to.eql(3);
+            buyOrders = await getBuyOrders();
+            expect(buyOrders.length).to.eql(0);
+        });
     });
 });
+
+            // console.log((await TokenA.balanceOf(owner.address)).toNumber());
+            // console.log((await TokenB.balanceOf(owner.address)).toNumber());
+            // console.log((await TokenA.balanceOf(addr1.address)).toNumber());
+            // console.log((await TokenB.balanceOf(addr1.address)).toNumber());
+            // console.log((await TokenA.balanceOf(OrderBook.address)).toNumber());
+            // console.log((await TokenB.balanceOf(OrderBook.address)).toNumber());
