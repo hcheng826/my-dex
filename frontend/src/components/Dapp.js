@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 
 // We import the contract's artifacts and address here, as we are going to be
 // using them with ethers
-import TokenArtifact from "../contracts/Token.json";
+import TokenArtifact from "../contracts/TokenA.json";
 import contractAddress from "../contracts/contract-address.json";
 
 // All the logic of this dapp is contained in the Dapp component.
@@ -18,6 +18,8 @@ import { Transfer } from "./Transfer";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
 import { NoTokensMessage } from "./NoTokensMessage";
+import { OrderList } from "./OrderList";
+import { PlaceOrder } from "./PlaceOrder";
 
 // This is the Hardhat Network id, you might change it in the hardhat.config.js
 // Here's a list of network ids https://docs.metamask.io/guide/ethereum-provider.html#properties
@@ -45,10 +47,12 @@ export class Dapp extends React.Component {
     // You don't need to follow this pattern, but it's an useful example.
     this.initialState = {
       // The info of the token (i.e. It's Name and symbol)
-      tokenData: undefined,
+      tokenAData: undefined,
+      tokenBData: undefined,
       // The user's address and balance
       selectedAddress: undefined,
-      balance: undefined,
+      balanceA: undefined,
+      balanceB: undefined,
       // The ID about transactions being sent, and any possible error with them
       txBeingSent: undefined,
       transactionError: undefined,
@@ -157,7 +161,43 @@ export class Dapp extends React.Component {
             )}
           </div>
         </div>
+
+        <div className="row">
+          <h1 className="mx-auto">Y/X Pair</h1>
+        </div>
+
+        <div className="row">
+          <div className="col">
+            <OrderList
+              title={"Sell Orders"}
+              orders={[{price: 1, amount:100}]}
+            />
+          </div>
+          <div className="col">
+            <OrderList
+              title={"Buy Orders"}
+              orders={[]}
+            />
+          </div>
+          <div className="col">
+            <div className="row">
+              <h1><br></br></h1>
+            </div>
+            <div className="row">
+              <PlaceOrder
+                title={"Place Buy Order"}
+              />
+            </div>
+            <br></br>
+            <div className="row">
+              <PlaceOrder
+                title={"Place Sell Order"}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
     );
   }
 
@@ -230,7 +270,7 @@ export class Dapp extends React.Component {
     // When, we initialize the contract using that provider and the token's
     // artifact. You can do this same thing with your contracts.
     this._token = new ethers.Contract(
-      contractAddress.Token,
+      contractAddress.TokenA,
       TokenArtifact.abi,
       this._provider.getSigner(0)
     );
