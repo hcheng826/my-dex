@@ -1,6 +1,6 @@
 import React from "react";
 
-export function PlaceOrder({ action, placeOrder }) {
+export function PlaceOrder({ action, placeOrder, approve, isApproved }) {
   return (
     <div className="container">
         <h3>{action}</h3>
@@ -35,8 +35,15 @@ export function PlaceOrder({ action, placeOrder }) {
                     <span class="input-group-text">tradeToken</span>
                 </div>
             </div>
-            <div className="mx-auto">
-                <button type="submit" class="btn btn-primary">{action}</button>
+            <div className="row">
+                <div className="col">
+                    {/* TODO: show Approve A or B explicitly */}
+                    {!isApproved && <button className="btn btn-primary" onClick={() => { approve(); }}>Approve</button>}
+                    {isApproved && <button className="btn btn-primary" disabled>Approved</button>}
+                </div>
+                <div className="col">
+                    <button type="submit" class="btn btn-primary">{action}</button>
+                </div>
             </div>
         </form>
     </div>

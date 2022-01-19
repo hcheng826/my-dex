@@ -58,6 +58,9 @@ export class Dapp extends React.Component {
       transactionError: undefined,
       networkError: undefined,
 
+      isTokenAApproved: false,
+      isTokenBApproved: false,
+
       buyOrders: [],
       sellOrders: [],
     };
@@ -153,6 +156,9 @@ export class Dapp extends React.Component {
                 placeOrder={(price, amount) => {
                   this._placeOrder(true, price, amount)
                 }}
+                // TODO: put real logic
+                approve={()=>{ this.setState({ isTokenBApproved: true }) }}
+                isApproved={this.state.isTokenBApproved}
               />
             </div>
             <br></br>
@@ -162,6 +168,9 @@ export class Dapp extends React.Component {
                 placeOrder={(price, amount) => {
                   this._placeOrder(false, price, amount)
                 }}
+                // TODO: put real logic
+                approve={()=>{ this.setState({ isTokenAApproved: true }) }}
+                isApproved={this.state.isTokenAApproved}
               />
             </div>
           </div>
