@@ -3,7 +3,7 @@ import React from "react";
 export function OrderList({ title, orders }) {
   return (
     <div className="container">
-        <h2>{title}</h2>
+        <h3>{title}</h3>
         <table className="table">
             <thead>
             <tr>

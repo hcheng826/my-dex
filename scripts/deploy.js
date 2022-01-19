@@ -3,12 +3,12 @@
 
 let TokenA = {
   contractName: "TokenA",
-  initSupply: 10000,
+  initSupply: 1000000000,
 };
 
 let TokenB = {
   contractName: "TokenB",
-  initSupply: 10000,
+  initSupply: 1000000000,
 };
 
 let OrderBook = {
