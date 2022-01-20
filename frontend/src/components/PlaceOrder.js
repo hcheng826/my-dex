@@ -1,9 +1,9 @@
 import React from "react";
 
-export function PlaceOrder({ action, placeOrder, approve, isApproved }) {
+export function PlaceOrder({ action, placeOrder, tradeToken, baseToken, approve, isApproved }) {
   return (
     <div className="container">
-        <h3>{action}</h3>
+        <h3>Place {action} Order</h3>
         <form
             onSubmit={(event) => {
                 event.preventDefault();
@@ -23,7 +23,7 @@ export function PlaceOrder({ action, placeOrder, approve, isApproved }) {
                 </div>
                 <input type="text" class="form-control" name="price"></input>
                 <div class="input-group-append">
-                    <span class="input-group-text">baseToken</span>
+                    <span class="input-group-text">{baseToken}</span>
                 </div>
             </div>
             <div class="input-group mb-3">
@@ -32,14 +32,13 @@ export function PlaceOrder({ action, placeOrder, approve, isApproved }) {
                 </div>
                 <input type="text" class="form-control" name="amount"></input>
                 <div class="input-group-append">
-                    <span class="input-group-text">tradeToken</span>
+                    <span class="input-group-text">{tradeToken}</span>
                 </div>
             </div>
             <div className="row">
                 <div className="col">
-                    {/* TODO: show Approve A or B explicitly */}
-                    {!isApproved && <button className="btn btn-primary" onClick={() => { approve(); }}>Approve</button>}
-                    {isApproved && <button className="btn btn-primary" disabled>Approved</button>}
+                    {!isApproved && <button className="btn btn-primary" onClick={() => { approve(); }}>Approve {action==="Buy"? baseToken : tradeToken}</button>}
+                    {isApproved && <button className="btn btn-primary" disabled>Approved {action==="Buy"? baseToken : tradeToken}</button>}
                 </div>
                 <div className="col">
                     <button type="submit" class="btn btn-primary">{action}</button>
