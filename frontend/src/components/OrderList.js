@@ -1,17 +1,18 @@
 import React from "react";
 
-export function OrderList({ title, orders }) {
+export function OrderList({ action, orders }) {
+  const color = action === 'Buy'? 'bg-success' : 'bg-danger';
   return (
     <div className="container">
-        <h3>{title}</h3>
+        <h3>{action} Order</h3>
         <table className="table">
-            <thead>
+            <thead className="text-white bg-secondary">
             <tr>
                 <th scope="col">Price</th>
                 <th scope="col">Amount</th>
             </tr>
             </thead>
-            <tbody>
+            <tbody className={"text-white " + color}>
                   { [...Array(orders.length).keys()].map((idx) => {
                     return (
                       <tr>

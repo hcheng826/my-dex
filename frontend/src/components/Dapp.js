@@ -63,6 +63,8 @@ export class Dapp extends React.Component {
 
       buyOrders: [],
       sellOrders: [],
+
+      lastExecutePrice: undefined,
     };
 
     this.state = this.initialState;
@@ -132,15 +134,19 @@ export class Dapp extends React.Component {
         <hr />
 
         <div className="row">
+          <h5>Last Executed Price: {this.state.lastExecutePrice? this.state.lastExecutePrice : " - "} {this.state.tokenDataB.symbol}</h5>
+        </div>
+
+        <div className="row">
           <div className="col">
             <OrderList
-              title={"Sell Orders"}
+              action={"Sell"}
               orders={this.state.sellOrders}
             />
           </div>
           <div className="col">
             <OrderList
-              title={"Buy Orders"}
+              action={"Buy"}
               orders={this.state.buyOrders}
             />
           </div>
@@ -325,7 +331,7 @@ export class Dapp extends React.Component {
     const placeOrderPromise = isBuy ?
         this._orderBook.placeBuyOrder(price, amount) :
         this._orderBook.placeSellOrder(price, amount);
-    const receipt = this._snedTransaction(placeOrderPromise);
+    this._snedTransaction(placeOrderPromise);
   }
 
   async _snedTransaction(txPromise) {
@@ -379,7 +385,6 @@ export class Dapp extends React.Component {
 
     async function getOrders(headOrderId) {
       const headOrder = await getOrderById(headOrderId);
-      console.log('headOrder: ', headOrder);
       const headOrderToNumber = {
         price: headOrder.price.toNumber(),
         amount: headOrder.amount.toNumber(),
@@ -388,7 +393,6 @@ export class Dapp extends React.Component {
 
       let orders = [headOrderToNumber];
       let currOrder = await getOrderById(headOrder.nextOrderId.toNumber());
-      console.log('currOrder: ', currOrder);
       while (currOrder.amount.toNumber() !== 0) {
           const currOrderToNumber = {
             price: currOrder.price.toNumber(),
@@ -402,12 +406,13 @@ export class Dapp extends React.Component {
 
     const highestBuyOrderId = (await this._orderBook.highestBuyOrderId()).toNumber();
     const lowestSellOrderId = (await this._orderBook.lowestSellOrderId()).toNumber();
-    console.log('highestBuyOrderId: ', highestBuyOrderId);
     const buyOrders = await getOrders(highestBuyOrderId);
     const sellOrders = await getOrders(lowestSellOrderId);
-    console.log("buyOrders: ", buyOrders);
-    console.log("sellOrders: ", sellOrders);
     this.setState({ buyOrders, sellOrders });
+
+    this._orderBook.on("OrderExecuted", (_isBuy, _maker, _taker, _price, _amount) => {
+      this.setState({ lastExecutePrice: _price.toNumber() });
+    })
   }
 
   // This method just clears part of the state.
