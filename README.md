@@ -2,6 +2,8 @@
 
 A DEX for practicing Dapp development using hardhat framework.
 
+![image](https://user-images.githubusercontent.com/23033847/150545819-b9a41eda-eee7-4a39-a58f-551c43d94966.png)
+
 ![image](https://user-images.githubusercontent.com/23033847/150377611-63011978-472a-47d9-ab02-3920376977a6.png)
 
 
