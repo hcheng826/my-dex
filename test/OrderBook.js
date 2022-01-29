@@ -47,10 +47,6 @@ describe('OrderBook contract', () => {
         };
         getOrderById = async (id) => { return await OrderBook.getOrderById(id); };
 
-        console.log(owner.address);
-        console.log(addr1.address);
-        console.log(OrderBook.address);
-
         TokenA.transfer(addr1.address, 100);
         TokenB.transfer(addr1.address, 100);
         TokenA.approve(OrderBook.address, initSupplyA);
