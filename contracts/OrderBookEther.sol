@@ -44,17 +44,17 @@ contract OrderBookEther {
         return orderById[_id];
     }
 
-    function placeBuyOrderEther(uint256 _price, uint256 _amount) external payable positivePriceAmount(_price, _amount) {
+    function placeBuyOrder(uint256 _price, uint256 _amount) external payable positivePriceAmount(_price, _amount) {
         placeOrderEther(true, _price, _amount);
     }
 
-    function placeSellOrderEther(uint256 _price, uint256 _amount) external positivePriceAmount(_price, _amount) {
+    function placeSellOrder(uint256 _price, uint256 _amount) external positivePriceAmount(_price, _amount) {
         placeOrderEther(false, _price, _amount);
     }
 
     function placeOrderEther(bool _isBuy, uint256 _price, uint256 _amount) internal {
         if (_isBuy) {
-            require(msg.value >= _amount*_price, string(abi.encodePacked("insufficient Ether")));
+            require(msg.value >= _amount*_price, string(abi.encodePacked("Not sending enough Ether")));
         } else {
             require(tradeToken.balanceOf(msg.sender) >= _amount, string(abi.encodePacked("insufficient ", tradeToken.symbol())));
         }
