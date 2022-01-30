@@ -213,9 +213,6 @@ describe('OrderBookEther contract', () => {
             ownerBalance = (await ethers.provider.getBalance(owner.address));
             addr1Balacne = (await ethers.provider.getBalance(addr1.address));
             contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
-            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
-            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
-            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
 
             expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(10008);
             expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(9992);
@@ -227,17 +224,21 @@ describe('OrderBookEther contract', () => {
             expect(orders.length).to.eql(0);
         });
     });
-    xdescribe('Mix: match and place order', async () => {
+    describe('Mix: match and place order', async () => {
         it('can execute partial buy order and place residual amount', async () => {
             await OrderBookEther.placeSellOrder(10, 2);
-            await OrderBookEther.connect(addr1).placeBuyOrder(13, 5);
+            await OrderBookEther.connect(addr1).placeBuyOrder(13, 5, { value: ethers.utils.parseEther('65')});
 
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(10030);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(9927);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(43);
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9898);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(102);
             expect((await TokenA.balanceOf(OrderBookEther.address)).toNumber()).to.eql(0);
-            // expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9922);
-            // expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(39);
-            // expect((await TokenB.balanceOf(OrderBookEther.address)).toNumber()).to.eql(39);
 
             sellOrders = await getSellOrders();
             expect(sellOrders.length).to.eql(0);
@@ -248,15 +249,18 @@ describe('OrderBookEther contract', () => {
             expect(buyOrders[0].amount.toNumber()).to.eql(3);
         });
         it('can execute partial sell order and place residual amount', async () => {
-            await OrderBookEther.placeBuyOrder(13, 2);
+            await OrderBookEther.placeBuyOrder(13, 2, { value: ethers.utils.parseEther('26')});
             await OrderBookEther.connect(addr1).placeSellOrder(10, 5);
 
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(10008);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(9949);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(0);
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9878);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(95);
-            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(122);
             expect((await TokenA.balanceOf(OrderBookEther.address)).toNumber()).to.eql(3);
-            expect((await TokenB.balanceOf(OrderBookEther.address)).toNumber()).to.eql(0);
 
             sellOrders = await getSellOrders();
             expect(sellOrders.length).to.eql(1);
@@ -268,10 +272,9 @@ describe('OrderBookEther contract', () => {
         });
     });
 });
-
-            // console.log((await TokenA.balanceOf(owner.address)).toNumber());
-            // console.log((await TokenB.balanceOf(owner.address)).toNumber());
-            // console.log((await TokenA.balanceOf(addr1.address)).toNumber());
-            // console.log((await TokenB.balanceOf(addr1.address)).toNumber());
-            // console.log((await TokenA.balanceOf(OrderBookEther.address)).toNumber());
-            // console.log((await TokenB.balanceOf(OrderBookEther.address)).toNumber());
+            // ownerBalance = (await ethers.provider.getBalance(owner.address));
+            // addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            // contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
