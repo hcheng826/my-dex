@@ -4,3 +4,8 @@ node_modules
 #Hardhat files
 cache
 artifacts
+
+# api keys, private key
+secret.json
+
+.firebase
