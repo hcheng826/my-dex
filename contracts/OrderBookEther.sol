@@ -69,6 +69,7 @@ contract OrderBookEther {
         uint256 edgeOrderId = _isBuy ? lowestSellOrderId : highestBuyOrderId;
         Order memory edgeOrder = orderById[edgeOrderId];
         uint256 residualAmount = _amount;
+        uint256 residualEther = msg.value;
 
         bool canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
 
@@ -76,10 +77,17 @@ contract OrderBookEther {
             if (edgeOrder.amount > residualAmount) {
                 orderById[edgeOrderId].amount -= residualAmount;
                 executeOrder(_isBuy, edgeOrder, payable(msg.sender), payable(edgeOrder.maker), getExecutionPrice(_price, edgeOrder.price), residualAmount);
-                return 0;
+                if (_isBuy) {
+                    residualEther -= getExecutionPrice(_price, edgeOrder.price)*residualAmount * 1 ether;
+                }
+                residualAmount = 0;
+                break;
             } else {
                 residualAmount -= edgeOrder.amount;
                 executeOrder(_isBuy, edgeOrder, payable(msg.sender), payable(edgeOrder.maker), getExecutionPrice(_price, edgeOrder.price), edgeOrder.amount);
+                if (_isBuy) {
+                    residualEther -= getExecutionPrice(_price, edgeOrder.price)*edgeOrder.amount * 1 ether;
+                }
 
                 uint256 nextEdgeOrderId = edgeOrder.nextOrderId;
                 if (_isBuy) {
@@ -92,6 +100,11 @@ contract OrderBookEther {
                 edgeOrder = orderById[edgeOrderId];
             }
             canExecute = _isBuy ? edgeOrder.price <= _price : edgeOrder.price >= _price;
+        }
+        if (_isBuy && residualAmount == 0) {
+            // console.log('residualEther: ', residualEther);
+            // console.log('address(this).balance: ', address(this).balance);
+            payable(msg.sender).transfer(residualEther);
         }
         return residualAmount;
     }
@@ -142,9 +155,6 @@ contract OrderBookEther {
         if (_isBuy) {
             tradeToken.transfer(_taker, _amount);
             _maker.transfer(_amount*_price * 1 ether);
-            if (msg.value - _amount*_price * 1 ether > 0) {
-                _taker.transfer(msg.value - _amount*_price * 1 ether);
-            }
         } else {
             _taker.transfer(_amount*_price * 1 ether);
             tradeToken.transferFrom(_taker, _maker, _amount);
