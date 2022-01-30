@@ -118,5 +118,10 @@ describe("TokenA contract", function () {
       );
       expect(addr2Balance).to.equal(50);
     });
+
+    it("can mint to user", async function () {
+      await TokenA.connect(addrs[0]).mint();
+      expect(await TokenA.balanceOf(addrs[0].address)).to.equal(100);
+    });
   });
 });

@@ -7,4 +7,8 @@ contract TokenB is ERC20 {
     constructor (uint initSupply) ERC20("Token B", "B") {
         _mint(msg.sender, initSupply);
     }
+
+    function mint() external {
+        _mint(msg.sender, 100);
+    }
 }
