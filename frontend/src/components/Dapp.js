@@ -152,6 +152,19 @@ export class Dapp extends React.Component {
           </div>
           <div className="col">
             <div className="row">
+              <div className="col">
+                <button className="btn btn-primary" onClick={ async () => { await this._tokenA.mint(); }}>
+                  Give me some {this.state.tokenDataA.name}
+                </button>
+              </div>
+              <div className="col">
+                <button className="btn btn-primary" onClick={ async () => { await this._tokenB.mint(); }}>
+                  Give me some {this.state.tokenDataB.name}
+                </button>
+              </div>
+            </div>
+            <hr />
+            <div className="row">
               <h4>{this.state.tokenDataA.name} balance: {this.state.balanceA.toString()}</h4>
               <h4>{this.state.tokenDataB.name} balance: {this.state.balanceB.toString()}</h4>
             </div>
