@@ -5,7 +5,7 @@ describe('OrderBookEther contract', () => {
     let TokenA;
     let OrderBookEther;
     let getOrderById, getHighestBuyOrderId, getLowestSellOrderId, getBuyOrders, getSellOrders;
-    let initEtherBalance = {};
+    let ownerBalance, addr1Balacne, contractBalacne;
 
     const initSupplyA = 10000;
 
@@ -44,28 +44,14 @@ describe('OrderBookEther contract', () => {
         };
         getOrderById = async (id) => { return await OrderBookEther.getOrderById(id); };
 
-        // console.log(owner.address);
-        // console.log(addr1.address);
-        // console.log(OrderBookEther.address);
-
-        // const tx0 = await owner.sendTransaction({
-        //     to: addr1.address,
-        //     value: ethers.constants.WeiPerEther,
-        // });
-        // // console.log('tx0: ', tx0);
-        // await tx0.wait();
         TokenA.transfer(addr1.address, 100);
         TokenA.approve(OrderBookEther.address, initSupplyA);
         TokenA.connect(addr1).approve(OrderBookEther.address, initSupplyA);
-
-        initEtherBalance[owner.address] = (await ethers.provider.getBalance(owner.address)).toString();
-        initEtherBalance[addr1.address] = (await ethers.provider.getBalance(addr1.address)).toString();
-        initEtherBalance[addr2.address] = (await ethers.provider.getBalance(addr2.address)).toString();
     });
 
     describe('Place order', async () => {
         it('can place buy order', async () => {
-            const tx = await OrderBookEther.placeBuyOrder(10, 2, { value: 10*2 });
+            const tx = await OrderBookEther.placeBuyOrder(10, 2, { value: ethers.utils.parseUnits('20', 'gwei') });
             const rc = await tx.wait();
             const orderPlaced = rc.events.find(event => event.event === 'OrderPlaced');
             expect(orderPlaced.args._isBuy).to.eql(true);
@@ -97,13 +83,13 @@ describe('OrderBookEther contract', () => {
             expect(orders[0].nextOrderId.toNumber()).to.eql(1);
         });
         it('cannot place order when insufficient amount', async () => {
-            console.log('insufficient ' + await TokenA.symbol());
-            expect(OrderBookEther.connect(addr2).placeSellOrder(10, 2)).to.be.revertedWith('insufficient ' + await TokenA.symbol());
+            // expect(OrderBookEther.connect(addr2).placeSellOrder(10, 2)).to.be.revertedWith('insufficient ' + await TokenA.symbol()); // not working - https://github.com/EthWorks/Waffle/issues/95
+            expect(OrderBookEther.connect(addr2).placeSellOrder(10, 2)).to.be.reverted;
         });
-        xit('can insert buy order', async () => {
-            await OrderBookEther.placeBuyOrder(10, 2, { value: 10*2 });
-            await OrderBookEther.placeBuyOrder(12, 3, { value: 12*3 });
-            await OrderBookEther.placeBuyOrder(11, 1, { value: 11*1 });
+        it('can insert buy order', async () => {
+            await OrderBookEther.placeBuyOrder(10, 2, { value: ethers.utils.parseUnits('20', 'gwei') });
+            await OrderBookEther.placeBuyOrder(12, 3, { value: ethers.utils.parseUnits('36', 'gwei') });
+            await OrderBookEther.placeBuyOrder(11, 1, { value: ethers.utils.parseUnits('11', 'gwei') });
 
             const highestBuyOrderId = (await OrderBookEther.highestBuyOrderId()).toNumber();
             [order1, order2, order3] = await getOrders(highestBuyOrderId);
@@ -116,7 +102,7 @@ describe('OrderBookEther contract', () => {
             orders = await getBuyOrders();
             expect(orders.length).to.eql(3);
         });
-        xit('can insert sell order', async () => {
+        it('can insert sell order', async () => {
             await OrderBookEther.placeSellOrder(10, 2);
             await OrderBookEther.placeSellOrder(12, 3);
             await OrderBookEther.placeSellOrder(11, 1);
@@ -133,76 +119,134 @@ describe('OrderBookEther contract', () => {
             expect(orders.length).to.eql(3);
         });
     });
-    xdescribe('Consume order', async () => {
+    describe('Consume order', async () => {
         it('can take 1 buy order with same price', async () => {
-            await OrderBookEther.placeBuyOrder(10, 2, { value: 10*2 });
-            await OrderBookEther.connect(addr1).placeSellOrder(10, 2);
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
+
+            gasUsed = [];
+            await OrderBookEther.placeBuyOrder(1, 2, { value: ethers.utils.parseEther('2') });
+
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
+
+            await OrderBookEther.connect(addr1).placeSellOrder(1, 2);
+
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
 
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(98);
-
-            const ownerBalance = (await ethers.provider.getBalance(owner.address)).toString();
-            const addr1Balacne = (await ethers.provider.getBalance(addr1.address)).toString();
-            console.log(`ownerBalance - init: ${initEtherBalance[owner.address]} / now: ${ownerBalance}`);
-            console.log(`addr1Balacne - init: ${initEtherBalance[addr1.address]} / now: ${addr1Balacne}`);
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(9998);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(10002);
 
             orders = await getBuyOrders();
             expect(orders.length).to.eql(0);
         });
-        xit('can take 1 buy order with different price', async () => {
-
-            await OrderBookEther.placeBuyOrder(12, 2, { value: 12*2 });
+        it('can take 1 buy order with different price', async () => {
+            await OrderBookEther.placeBuyOrder(12, 2, { value: ethers.utils.parseEther('24') });
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
 
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9900);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9876);
-            expect((await TokenB.balanceOf(OrderBookEther.address)).toNumber()).to.eql(24);
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(9974);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(24);
 
             await OrderBookEther.connect(addr1).placeSellOrder(10, 2);
 
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            // console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            // console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            // console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
+
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9902);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9878);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(98);
-            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(122);
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(9976);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(10024);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(0);
 
             orders = await getBuyOrders();
             expect(orders.length).to.eql(0);
         });
-        xit('can take 1+ buy order', async () => {
-            await OrderBookEther.placeBuyOrder(10, 2, { value: 10*2 });
-            await OrderBookEther.placeBuyOrder(12, 3, { value: 12*3 });
-
+        it('can take 1+ buy order', async () => {
+            await OrderBookEther.placeBuyOrder(10, 2, { value: ethers.utils.parseEther('20') });
+            await OrderBookEther.placeBuyOrder(12, 3, { value: ethers.utils.parseEther('36') });
             await OrderBookEther.connect(addr1).placeSellOrder(9, 5);
 
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(9928);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(10072);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(0);
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9905);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9852);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(95);
-            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(148);
 
             orders = await getBuyOrders();
             expect(orders.length).to.eql(0);
         });
         xit('can take 1 sell order with different price', async () => {
             await OrderBookEther.placeSellOrder(10, 2);
-            await OrderBookEther.connect(addr1).placeBuyOrder(12, 2, { value: 12*2 });
+            await OrderBookEther.connect(addr1).placeBuyOrder(12, 2, { value: ethers.utils.parseEther('24') });
 
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+
+            expect(Math.round(ethers.utils.formatEther(ownerBalance))).to.eql(9950);
+            expect(Math.round(ethers.utils.formatEther(addr1Balacne))).to.eql(10050);
+            expect(Math.round(ethers.utils.formatEther(contractBalacne))).to.eql(0);
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9898);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9922);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(102);
-            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(78);
 
             orders = await getSellOrders();
             expect(orders.length).to.eql(0);
         });
-        xit('can take 1+ sell order', async () => {
+        it('can take 1+ sell order', async () => {
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
             await OrderBookEther.placeSellOrder(10, 2);
             await OrderBookEther.placeSellOrder(12, 3);
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
 
-            await OrderBookEther.connect(addr1).placeBuyOrder(13, 5, { value: 13*5 });
+            await OrderBookEther.connect(addr1).placeBuyOrder(13, 5, { value: ethers.utils.parseEther('65')});
+            ownerBalance = (await ethers.provider.getBalance(owner.address));
+            addr1Balacne = (await ethers.provider.getBalance(addr1.address));
+            contractBalacne = (await ethers.provider.getBalance(OrderBookEther.address));
+            console.log('ownerBalance in Ether: ', ethers.utils.formatEther(ownerBalance));
+            console.log('addr1Balacne in Ether: ', ethers.utils.formatEther(addr1Balacne));
+            console.log('contractBalacne in Ether: ', ethers.utils.formatEther(contractBalacne));
 
             expect((await TokenA.balanceOf(owner.address)).toNumber()).to.eql(9895);
-            expect((await TokenB.balanceOf(owner.address)).toNumber()).to.eql(9958);
             expect((await TokenA.balanceOf(addr1.address)).toNumber()).to.eql(105);
-            expect((await TokenB.balanceOf(addr1.address)).toNumber()).to.eql(42);
 
             orders = await getSellOrders();
             expect(orders.length).to.eql(0);

@@ -129,7 +129,7 @@ contract OrderBookEther {
         }
         uint256 transferAmount = _isBuy ? _amount*_price : _amount;
         // makerToken.transferFrom(msg.sender, address(this), transferAmount);
-        if (_isBuy) {
+        if (!_isBuy) {
             tradeToken.transferFrom(msg.sender, address(this), transferAmount);
         }
         orderIdCounter += 1;
@@ -138,18 +138,19 @@ contract OrderBookEther {
     }
 
     function executeOrder(bool _isBuy, Order memory _takenOrder, address payable _taker, address payable _maker, uint256 _price, uint256 _amount) internal {
+        uint256 makerLockedAmount = _takenOrder.amount*_takenOrder.price;
         if (_isBuy) {
             tradeToken.transfer(_taker, _amount);
-            // baseToken.transferFrom(_taker, _maker, _amount*_price);
-            _maker.transfer(_amount*_price);
+            _maker.transfer(_amount*_price * 1 ether);
+            if (msg.value - _amount*_price * 1 ether > 0) {
+                _taker.transfer(msg.value - _amount*_price * 1 ether);
+            }
         } else {
-            uint256 makerLockedAmount = _takenOrder.amount*_takenOrder.price;
-            // baseToken.transfer(_taker, _amount*_price);
-            _taker.transfer(_amount*_price);
+            _taker.transfer(_amount*_price * 1 ether);
             tradeToken.transferFrom(_taker, _maker, _amount);
-            // baseToken.transfer(_maker, makerLockedAmount-_amount*_price);
-            _maker.transfer(makerLockedAmount-_amount*_price);
-
+            if (makerLockedAmount - _amount*_price > 0) {
+                _maker.transfer((makerLockedAmount - _amount*_price) * 1 ether);
+            }
         }
 
         emit OrderExecuted(_isBuy, _maker, _taker, _price, _amount);
