@@ -465,7 +465,7 @@ export class Dapp extends React.Component {
     }
 
     this.setState({
-      networkError: 'Please connect Metamask to Localhost:8545 or Ropsten Test Network'
+      networkError: 'Please connect Metamask to Ropsten Test Network' // Localhost:8545 for dev
     });
 
     return false;
