@@ -5,6 +5,14 @@ require("@nomiclabs/hardhat-waffle");
 // testing the frontend.
 require("./tasks/faucet");
 
+const secret = require('./secret.json');
+
 module.exports = {
-  solidity: "0.8.0"
+  solidity: "0.8.0",
+  networks: {
+    ropsten: {
+      url: `https://eth-ropsten.alchemyapi.io/v2/${secret.ALCHEMY_API_KEY}`,
+      accounts: [`${secret.ACCOUNT_DEV_PRIVATE_KEY}`]
+    }
+  },
 };

@@ -25,6 +25,7 @@ import { PlaceOrder } from "./PlaceOrder";
 // Here's a list of network ids https://docs.metamask.io/guide/ethereum-provider.html#properties
 // to use when deploying to other networks.
 const HARDHAT_NETWORK_ID = '31337';
+const ROPSTEN_NETWORK_ID = '3';
 
 // This is an error code that indicates that the user canceled a transaction
 const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
@@ -298,7 +299,10 @@ export class Dapp extends React.Component {
   // don't need to poll it. If that's the case, you can just fetch it when you
   // initialize the app, as we do with the token data.
   _startPollingData() {
-    this._pollDataInterval = setInterval(() => this._updateBalance(), 1000);
+    this._pollDataInterval = setInterval(() => {
+      this._updateBalance();
+      this._updateOrders();
+    }, 100);
 
     // We run it once immediately so we don't have to wait for it
     this._updateBalance();
@@ -455,12 +459,13 @@ export class Dapp extends React.Component {
 
   // This method checks if Metamask selected network is Localhost:8545
   _checkNetwork() {
-    if (window.ethereum.networkVersion === HARDHAT_NETWORK_ID) {
+    if (window.ethereum.networkVersion === HARDHAT_NETWORK_ID ||
+         window.ethereum.networkVersion === ROPSTEN_NETWORK_ID) {
       return true;
     }
 
     this.setState({
-      networkError: 'Please connect Metamask to Localhost:8545'
+      networkError: 'Please connect Metamask to Localhost:8545 or Ropsten Test Network'
     });
 
     return false;
