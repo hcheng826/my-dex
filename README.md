@@ -2,9 +2,13 @@
 
 A DEX for practicing Dapp development using hardhat framework.
 
-![image](https://user-images.githubusercontent.com/23033847/150545819-b9a41eda-eee7-4a39-a58f-551c43d94966.png)
+Try it out at https://mydex-b4a41.web.app/ 
 
-![image](https://user-images.githubusercontent.com/23033847/150377611-63011978-472a-47d9-ab02-3920376977a6.png)
+Please use Ropsten Testnet.
+
+![image](https://user-images.githubusercontent.com/23033847/152347386-c8a2bc6c-0c05-4492-9ac9-d01701f2f8a3.png)
+
+![image](https://user-images.githubusercontent.com/23033847/152347436-a1d5d20f-581d-4ae6-a708-01180faddf9e.png)
 
 
 ## Features
