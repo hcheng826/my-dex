@@ -1,6 +1,6 @@
 # My DEX
 
-A DEX for practicing Dapp development using hardhat framework.
+A practice project deployed to Rospten Network that implemented a order-book based DEX. The contract is written and deployed and a simple front-end is crafted. 
 
 Try it out at https://mydex-b4a41.web.app/ 
 
